@@ -1,0 +1,11 @@
+# This repository holds the BUILT site only. Nothing here is generated locally, so
+# the usual build artefacts should never appear; these entries exist so that a
+# mistaken copy of the source tree cannot be committed by accident.
+node_modules/
+.svelte-kit/
+*.duckdb
+*.db
+*.db.wal
+.env
+out/
+gold/

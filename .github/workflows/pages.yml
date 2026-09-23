@@ -1,0 +1,60 @@
+# Deploy the committed static site to GitHub Pages.
+#
+# There is deliberately NO BUILD STEP here. The site is built on the maintainer's
+# machine, where the corpus and the analysis databases live, and only the built
+# output is committed to this repository. That keeps the speeches, the analysis code
+# and the internal Office material out of a public repository entirely, and it means
+# this workflow cannot produce a figure that nobody has checked.
+#
+# The job SKIPS cleanly when there is nothing to publish, so this file can exist
+# before the site does without turning the Actions tab red on every push.
+name: Deploy Pages
+
+on:
+  push:
+    branches: ["main"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# One deployment at a time; never cancel one in flight, because a half-deployed
+# site would serve a mixture of two data versions.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    outputs:
+      publishable: ${{ steps.look.outputs.publishable }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: look
+        run: |
+          if [ -f index.html ]; then
+            echo "publishable=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "publishable=false" >> "$GITHUB_OUTPUT"
+            echo "No index.html at the repository root, so there is no site to" \
+                 "deploy yet. This is the expected state before launch." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+  deploy:
+    needs: check
+    if: needs.check.outputs.publishable == 'true'
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: "."
+      - id: deployment
+        uses: actions/deploy-pages@v4
